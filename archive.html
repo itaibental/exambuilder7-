@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ארכיון מבחנים</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="main-app-header" style="display:flex; justify-content:space-between; align-items:center; padding: 0 20px;">
+        <a href="index.html" style="color:white; text-decoration:none; font-size:1.5rem;">🏠</a>
+        <h1>ארכיון מבחנים</h1>
+        <button onclick="toggleAdminPanel()" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:white; width:auto; padding:5px 15px; font-size:0.8rem;">👨‍🏫 מורה</button>
+    </header>
+    <div class="container" style="flex-direction: column; overflow-y: auto;">
+        <div id="adminPanel" style="display:none; background:#2c3e50; color:white; padding:20px; margin:20px; border-radius:10px; border:2px dashed var(--accent);">
+            <h3 style="color:var(--accent);">ניהול ארכיון (למורה)</h3>
+            <p style="font-size:0.9rem; margin-bottom:15px; color:#bdc3c7; line-height: 1.5;">
+                <strong>הוראות הוספה:</strong><br>
+                1. העלה את קובץ המבחן (HTML) לתיקיית <code>exam/</code> בשרת שלך.<br>
+                2. הזן כאן את פרטי המבחן ואת שם הקובץ בדיוק כפי ששמרת אותו.<br>
+                3. לחץ "הוסף לרשימה". הנתונים יישמרו אוטומטית בענן.
+            </p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items: flex-end;">
+                <div style="flex:2;">
+                    <label style="font-size:0.8rem; display:block; margin-bottom:5px;">שם המבחן (לתצוגה)</label>
+                    <input type="text" id="newExamName" placeholder="למשל: בגרות קיץ תשפג">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.8rem; display:block; margin-bottom:5px;">שנה</label>
+                    <input type="number" id="newExamYear" placeholder="2023">
+                </div>
+                <div style="flex:2;">
+                    <label style="font-size:0.8rem; display:block; margin-bottom:5px;">שם הקובץ (בתיקיית exam)</label>
+                    <input type="text" id="newExamFileName" placeholder="math_2023.html" dir="ltr" style="text-align:left;">
+                </div>
+            </div>
+            <div style="margin-top:5px; margin-bottom:15px; opacity:0.7;">
+                <span style="font-size:0.8rem;">(אופציונלי) בחר קובץ רק כדי להעתיק את שמו אוטומטית:</span>
+                <input type="file" id="fileHelper" onchange="document.getElementById('newExamFileName').value = this.files[0].name" style="width:auto; display:inline-block; font-size:0.8rem;">
+            </div>
+            <div style="margin-top:10px; display:flex; gap:10px;">
+                <button onclick="addExamToArchive()" class="btn-add" style="width:auto;">➕ הוסף לרשימה</button>
+                <button onclick="clearArchive()" style="width:auto; background:#c0392b; color:white; margin-top:0;">🗑️ אפס רשימה</button>
+            </div>
+        </div>
+        <div style="padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+            <input type="text" id="searchBox" placeholder="חפש מבחן לפי שם או שנה..." oninput="renderArchive()" style="padding:15px; font-size:1.1rem; border-radius:30px; border:2px solid #ddd; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+        </div>
+        <div id="examGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%;"></div>
+    </div>
+    <script type="module" src="js/archive.js"></script>
+</body>
+</html>

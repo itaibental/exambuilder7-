@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כניסת תלמיד - EXAMBUILDER</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #f4f6f8; display: flex; flex-direction: column; min-height: 100vh; }
+        .login-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { background: white; padding: 40px; border-radius: 20px; box-shadow: var(--shadow); width: 100%; max-width: 450px; text-align: center; }
+        .login-card h2 { color: var(--primary); margin-bottom: 20px; }
+        .id-input { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .id-input:focus { border-color: var(--accent); outline: none; }
+        .exam-item { background: #f8f9fa; border: 1px solid #eee; padding: 15px; margin-top: 15px; border-radius: 10px; cursor: pointer; text-align: right; transition: all 0.2s; }
+        .exam-item:hover { background: var(--accent-light); border-color: var(--accent); transform: translateY(-2px); }
+        .exam-title { font-weight: bold; font-size: 1.1rem; color: var(--primary); margin-bottom: 5px; }
+        .exam-date { font-size: 0.85rem; color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <header class="main-app-header">
+        <a href="index.html" style="color:white; position:absolute; right:20px; top:15px; text-decoration:none; font-size:1.2rem;">🏠 בית</a>
+        <h1>אזור תלמידים</h1>
+    </header>
+
+    <div class="login-container">
+        <div class="login-card">
+            <div id="step1">
+                <h2>הזדהות למערכת</h2>
+                <p style="color:#7f8c8d; margin-bottom:20px;">אנא הזן את תעודת הזהות שלך כדי לצפות במבחנים הזמינים עבורך.</p>
+                
+                <input type="text" id="studentID" class="id-input" placeholder="הכנס תעודת זהות (9 ספרות)" onkeypress="handleEnter(event)">
+                
+                <button id="loginBtn" onclick="fallbackError()" class="btn-download" style="width: 100%; background: var(--accent); font-size: 1.1rem; padding: 15px;">
+                    המשך לבחירת מבחן
+                </button>
+            </div>
+
+            <div id="step2" style="display:none; text-align: right;">
+                <h3 id="welcomeMsg" style="color:var(--success); text-align: center;"></h3>
+                <p style="font-weight: bold; margin-bottom: 10px;">בחר מבחן להתחלה:</p>
+                <div id="examsList">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function fallbackError() {
+            if (!window.cloudLoaded) {
+                alert("המערכת לא הצליחה להתחבר לענן (Supabase).\n\n1. ודא שאתה פותח את האתר דרך שרת מקומי (Live Server).\n2. ודא שהקובץ supabase-service.js קיים בתוך תיקיית js.");
+            }
+        }
+        function handleEnter(e) {
+            if (e.key === 'Enter') document.getElementById('loginBtn').click();
+        }
+    </script>
+
+    <script type="module">
+        import { CloudService, LiveService } from './js/supabase-service.js?v=2000';
+        const REFRESH_MS = 40000; // קצב רענון גיבוי של רשימת המבחנים (40 שניות)
+        let examsUnsub = null;
+        let refreshTimer = null;
+        
+        // סימון שהענן נטען בהצלחה כדי לבטל את שגיאת הגיבוי
+        window.cloudLoaded = true;
+        let currentUser = null;
+
+        // חיבור הכפתור לפעולת האימות
+        document.getElementById('loginBtn').onclick = async () => {
+            const btn = document.getElementById('loginBtn');
+            const idInput = document.getElementById('studentID').value.trim();
+            
+            if (!idInput) {
+                alert('נא להזין תעודת זהות');
+                return;
+            }
+
+            btn.innerText = "⏳ מאמת פרטים...";
+            btn.disabled = true;
+
+            try {
+                const student = await CloudService.verifyStudent(idInput);
+                if (student) {
+                    currentUser = student;
+                    document.getElementById('step1').style.display = 'none';
+                    document.getElementById('step2').style.display = 'block';
+                    document.getElementById('welcomeMsg').innerText = `שלום, ${student.name} 👋`;
+                    startExamList();
+                } else {
+                    alert("תעודת זהות לא נמצאה במערכת. אנא פנה למורה.");
+                    btn.innerText = "המשך לבחירת מבחן";
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error("Login Error:", error);
+                alert("שגיאה בהתחברות למאגר הנתונים. ודא שיש לך חיבור לאינטרנט.");
+                btn.innerText = "המשך לבחירת מבחן";
+                btn.disabled = false;
+            }
+        };
+
+        // פונקציה לטעינת מבחנים פעילים
+        function renderExams(exams) {
+            const listContainer = document.getElementById('examsList');
+            if (!exams || exams.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center; color:#e74c3c;">אין מבחנים פעילים כרגע.</p>';
+                return;
+            }
+
+            // סידור מהמבחן החדש לישן
+            exams.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+            listContainer.innerHTML = exams.map(exam => `
+                <div class="exam-item" onclick="startExam('${exam.id}')">
+                    <div class="exam-title">📄 ${exam.title || 'מבחן ללא שם'}</div>
+                    <div class="exam-date">פורסם בתאריך: ${exam.createdAt ? new Date(exam.createdAt).toLocaleDateString('he-IL') : 'לא ידוע'}</div>
+                </div>
+            `).join('');
+        }
+
+        function showExamsError(error) {
+            console.error("Load Exams Error:", error);
+            document.getElementById('examsList').innerHTML = '<p style="text-align:center; color:red;">שגיאה בטעינת המבחנים.</p>';
+        }
+
+        // רענון גיבוי כל 40 שניות
+        async function refreshExams() {
+            try { renderExams(await CloudService.getActiveExams()); }
+            catch (error) { showExamsError(error); }
+        }
+
+        // האזנה בזמן אמת + רענון כל 40 שניות
+        function startExamList() {
+            document.getElementById('examsList').innerHTML = '<p style="text-align:center;">טוען מבחנים...</p>';
+            if (examsUnsub) examsUnsub();
+            examsUnsub = LiveService.watchExams(renderExams, showExamsError);
+            clearInterval(refreshTimer);
+            refreshTimer = setInterval(refreshExams, REFRESH_MS);
+        }
+
+        // פונקציית הפעלת המבחן מתוך הרשימה
+        window.startExam = (examId) => {
+            // שמירת הפרטים ב-Local Storage כדי להעביר לדף הרצת המבחן
+            localStorage.setItem('activeExamID', examId);
+            localStorage.setItem('studentID', currentUser.id);
+            localStorage.setItem('studentName', currentUser.name);
+            
+            // מעבר לדף פתרון המבחן (run_exam.html)
+            window.location.href = 'run_exam.html';
+        };
+    </script>
+</body>
+</html>

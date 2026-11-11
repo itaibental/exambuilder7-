@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Builder 6.0 - כניסה</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .welcome-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary) 0%, #2980b9 100%);
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+        }
+        .circle { position: absolute; border-radius: 50%; opacity: 0.1; z-index: 0; pointer-events: none; }
+        .circle-1 { width: 300px; height: 300px; background: white; top: -50px; left: -50px; }
+        .circle-2 { width: 500px; height: 500px; background: var(--accent); bottom: -100px; right: -100px; }
+        .header-content { text-align: center; color: white; z-index: 1; margin-bottom: 60px; animation: fadeInDown 0.8s ease-out; }
+        .main-title { font-size: 4rem; font-weight: 900; margin: 0; letter-spacing: 2px; text-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .sub-title { font-size: 1.3rem; margin-top: 15px; opacity: 0.9; font-weight: 300; max-width: 600px; line-height: 1.5; }
+        .cards-container { display: flex; gap: 30px; z-index: 1; animation: fadeInUp 0.8s ease-out 0.2s backwards; flex-wrap: wrap; justify-content: center; }
+        
+        /* כרטיסיות מוגדרות כ-div במקום כקישור רגיל כדי לתמוך בסיסמה */
+        .welcome-card { background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 24px; width: 280px; height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; text-decoration: none; color: var(--primary); padding: 30px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.15); position: relative; overflow: hidden; }
+        .welcome-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(52, 152, 219, 0.1), transparent); opacity: 0; transition: opacity 0.3s; }
+        .welcome-card:hover { transform: translateY(-15px) scale(1.02); box-shadow: 0 25px 50px rgba(0,0,0,0.25); border-color: var(--accent); }
+        .welcome-card:hover::before { opacity: 1; }
+        .card-icon-wrapper { background: #f4f6f8; width: 110px; height: 110px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 25px; transition: all 0.5s; box-shadow: inset 0 0 15px rgba(0,0,0,0.05); }
+        .welcome-card:hover .card-icon-wrapper { background: var(--accent); color: white; transform: rotateY(180deg); }
+        .card-icon { font-size: 3.5rem; transition: transform 0.5s; }
+        .welcome-card:hover .card-icon { transform: rotateY(-180deg); }
+        .card-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 15px; color: var(--primary); }
+        .card-desc { font-size: 0.95rem; color: #7f8c8d; line-height: 1.5; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 900px) { .cards-container { flex-direction: column; align-items: center; } .welcome-card { width: 85%; height: auto; } }
+    </style>
+</head>
+<body>
+    <div class="welcome-wrapper">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+        <div class="header-content">
+            <h1 class="main-title">Builder 6.0</h1>
+            <div class="sub-title">המערכת המתקדמת ליצירה, ניהול והפצה של מבחני בגרות דיגיטליים בענן</div>
+        </div>
+        <div class="cards-container">
+            
+            <a href="student_login.html" class="welcome-card">
+                <div class="card-icon-wrapper"><div class="card-icon">🎓</div></div>
+                <div class="card-title">כניסת תלמיד</div>
+                <div class="card-desc">הזדהות באמצעות תעודת זהות, בחירת מבחן זמין מתוך מאגר הענן וביצוע הבחינה.</div>
+            </a>
+            
+            <div class="welcome-card" onclick="requirePassword(event, 'editor.html')">
+                <div class="card-icon-wrapper"><div class="card-icon">✏️</div></div>
+                <div class="card-title">יצירת מבחן</div>
+                <div class="card-desc">עורך מתקדם ליצירה, עריכה והפצה של מבחנים. כולל אפשרות העלאה למאגר בענן.</div>
+            </div>
+            
+            <div class="welcome-card" onclick="requirePassword(event, 'admin_dashboard.html')">
+                <div class="card-icon-wrapper"><div class="card-icon">👨‍💼</div></div>
+                <div class="card-title">מנהל מערכת</div>
+                <div class="card-desc">ייבוא רשימות תלמידים (Excel), מעקב הגשות בזמן אמת ובדיקת מבחנים.</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // פונקציית הגנה שחוסמת מעבר אוטומטי ובודקת סיסמה
+        function requirePassword(e, targetPage) {
+            // עוצר כל התנהגות דפדפן שיכולה לגרום לקפיצה לדף
+            if(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            const pass = prompt("🔒 אזור מוגן לצוות חינוכי בלבד.\nאנא הזן סיסמת גישה:");
+            
+            if (pass === "1234") {
+                // רק אם הסיסמה נכונה, המערכת תעביר את המשתמש לנתיב שנבחר
+                window.location.href = targetPage;
+            } else if (pass !== null && pass !== "") { 
+                alert("❌ סיסמה שגויה! הגישה נדחתה.");
+            }
+        }
+    </script>
+</body>
+</html>
+
+```

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>העברת מבחנים מ-Firebase ל-Supabase</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+  #log { margin-top: 16px; white-space: pre-wrap; background: #f4f4f4; padding: 12px; border-radius: 6px; min-height: 60px; }
+</style>
+</head>
+<body>
+<h2>העברת מבחנים ל-Supabase</h2>
+<p>1. הרץ את <code>supabase_schema.sql</code> ב-Supabase, ומלא את <code>js/supabase-config.js</code>.<br>
+   2. בחר כאן את <code>exams_all.json</code> (הקובץ שיוצא מ-<code>export_exams.html</code>, בתוך exams_export.zip).</p>
+<input type="file" id="f" accept=".json">
+<div id="log"></div>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./js/supabase-config.js";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+const log = m => document.getElementById('log').textContent += m + "\n";
+
+document.getElementById('f').onchange = async e => {
+  try {
+    const exams = JSON.parse(await e.target.files[0].text());
+    log(`נמצאו ${exams.length} מבחנים`);
+    for (const x of exams) {
+      const { id, htmlContent, state, ...light } = x;
+      let r = await supabase.from('exams').upsert({ id, active: !!light.active, data: light });
+      if (r.error) throw new Error(`${light.title || id}: ${r.error.message}`);
+      r = await supabase.from('exam_content').upsert({ exam_id: id, html_content: htmlContent ?? null, state: state ?? null });
+      if (r.error) throw new Error(`${light.title || id} (תוכן): ${r.error.message}`);
+      log(`הועבר: ${light.title || id}`);
+    }
+    log('סיום. המזהים המקוריים נשמרו.');
+  } catch (err) { log('שגיאה: ' + err.message); }
+};
+</script>
+</body>
+</html>

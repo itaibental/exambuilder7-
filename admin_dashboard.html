@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>לוח בקרה מנהל - EXAMBUILDER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { background: #f4f6f8; overflow: hidden; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        .admin-layout { display: flex; gap: 20px; padding: 20px; flex: 1; overflow: hidden; height: calc(100vh - 60px); }
+        .sidebar-panel { width: 380px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 5px; }
+        .main-panels { flex: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
+        .panel { background: white; border-radius: 12px; display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden; border: 1px solid #eee; }
+        .panel-flex-1 { flex: 1; }
+        .panel-header { padding: 15px 20px; border-bottom: 1px solid #eee; background: #fafafa; font-weight: bold; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .panel-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .file-drop-area { border: 2px dashed #bdc3c7; border-radius: 8px; padding: 15px; text-align: center; background: #fcfcfc; transition: all 0.2s; margin-bottom: 15px; }
+        .file-drop-area:hover { border-color: var(--accent); background: var(--accent-light); }
+        .sheet-input, .manual-input { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 6px; font-family: inherit; font-size: 0.95rem; margin-top: 10px; box-sizing: border-box;}
+        .sheet-input { text-align: left; direction: ltr; }
+        .sheet-input:focus, .manual-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; padding: 12px; text-align: right; border-bottom: 2px solid #ddd; color: #7f8c8d; font-size: 0.9rem; position: sticky; top: 0; z-index: 10; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+        tr:hover td { background: #fdfdfd; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        .status-active, .status-submitted { background: #e8f6f3; color: #16a085; }
+        .status-inactive { background: #fdecea; color: #c0392b; }
+        .btn-toggle-on  { background: #e8f6f3; color: #16a085; border: 1px solid #a9dfbf; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        .btn-toggle-on:hover  { background: #fdedec; color: #c0392b; border-color: #f5b7b1; }
+        .btn-toggle-off { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: bold; transition: 0.2s; white-space: nowrap; }
+        .btn-toggle-off:hover { background: #e8f6f3; color: #16a085; border-color: #a9dfbf; }
+        .status-progress { background: #fef9e7; color: #f39c12; }
+        .btn-check { background: var(--accent); color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; }
+        .btn-check:hover { background: var(--accent-hover); }
+        .btn-delete-small { background: #ffebee; color: #c0392b; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.2s; }
+        .btn-delete-small:hover { background: #ffcdd2; }
+        .action-buttons { display: flex; gap: 5px; align-items: center; }
+        /* --- Skeleton loading --- */
+        @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+        .skel { display:inline-block; width:80%; height:14px; border-radius:4px; background: linear-gradient(90deg,#eee 25%,#f5f5f5 50%,#eee 75%); background-size:800px 100%; animation:shimmer 1.4s infinite; }
+        .skeleton-row td { padding:14px 12px; }
+        /* --- Modal snapshots --- */
+        .modal-overlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center; }
+        .modal-box { background:white;border-radius:12px;padding:30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.3); }
+        .modal-box h3 { margin-top:0;color:var(--primary); }
+        .snapshot-row { display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #eee;border-radius:8px;margin-bottom:8px;background:#fafafa; }
+        .snapshot-row:hover { background:#f0f8ff; }
+        .btn-restore { background:#8e44ad;color:white;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:0.85rem;font-weight:bold; }
+        .btn-clone { background:#e67e22;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:bold; }
+    </style>
+</head>
+<body>
+    <header class="main-app-header">
+        <a href="index.html" style="color:white; position:absolute; right:20px; top:15px; text-decoration:none; font-size:1.2rem;">🏠 בית</a>
+        <h1>לוח בקרה וניהול מבחנים בענן</h1>
+    </header>
+
+    <div class="admin-layout">
+        <div class="sidebar-panel">
+            <div class="panel">
+                <div class="panel-header">👥 הוספת מורשים למאגר</div>
+                <div class="panel-body">
+                    <div class="file-drop-area" style="text-align: right; padding: 15px;">
+                        <label style="font-weight: bold; color: var(--primary); display: block;">הזנה ידנית (תלמיד בודד)</label>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="manualStudentName" class="manual-input" style="margin-top:0;" placeholder="שם התלמיד">
+                            <input type="text" id="manualStudentID" class="manual-input" style="margin-top:0;" placeholder="תעודת זהות">
+                        </div>
+                        <button onclick="addSingleStudent()" class="btn-download" style="background: var(--accent); padding: 8px; font-size: 0.95rem; margin-top: 10px; box-shadow: none;">➕ הוסף למאגר</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; margin-top:20px;">
+                        <label style="font-weight: bold; color: var(--primary); margin:0;">ייבוא המוני</label>
+                        <button onclick="downloadTemplate()" class="btn-download" style="background: #95a5a6; padding: 5px 10px; font-size: 0.8rem; margin: 0; width: auto; box-shadow: none;">📥 פורמט (Excel)</button>
+                    </div>
+                    <div class="file-drop-area" style="padding: 10px;">
+                        <label style="font-size: 0.85rem; color: var(--primary); display: block; margin-bottom: 5px;">קובץ אקסל (.xlsx, .csv)</label>
+                        <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" style="display:block; margin:0 auto; width:100%; font-size: 0.85rem;">
+                    </div>
+                    <div class="file-drop-area" style="padding: 10px;">
+                        <label style="font-size: 0.85rem; color: var(--primary); display: block;">קישור Google Sheets</label>
+                        <input type="text" id="sheetsInput" class="sheet-input" placeholder="https://docs.google.com/spreadsheets/d/...">
+                    </div>
+                    <button onclick="importStudentsData()" class="btn-download" style="width: 100%; background: var(--success); font-size: 1.1rem; padding: 12px; margin-top: 5px;">סנכרן רשימה לענן</button>
+                    <div id="importStatus" style="margin-top:10px; font-weight:bold; text-align:center; padding: 8px; border-radius: 5px; display: none; font-size: 0.9rem;"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span>📋 תלמידים מורשים</span>
+                    <button onclick="fetchStudentsList()" style="background:white; border:1px solid #ddd; padding:4px 8px; border-radius:4px; font-size:0.8rem; cursor:pointer;">🔄 רענן</button>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <table id="studentsListTable">
+                        <thead><tr><th>שם</th><th>ת.ז.</th><th style="text-align:center;">פעולה</th></tr></thead>
+                        <tbody><tr><td colspan="3" style="text-align:center; padding:15px;">טוען נתונים...</td></tr></tbody>
+                    </table>
+                </div>
+                <div id="totalStudentsBadge" style="padding: 10px; font-size: 0.85rem; color: #7f8c8d; background:#fafafa; border-top:1px solid #eee;"></div>
+            </div>
+        </div>
+
+        <div class="main-panels">
+            <div class="panel panel-flex-1">
+                <div class="panel-header">
+                    <span>📚 מבחנים פעילים במאגר</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button onclick="bulkDownloadDocs()" id="btnBulkDownload" style="background:#2980b9;color:white;border:none;padding:5px 12px;border-radius:4px;font-size:0.8rem;cursor:pointer;display:none;">📥 הורד נבחרים DOCX</button>
+                        <button onclick="fetchExamsList()" style="background:white; border:1px solid #ddd; padding:5px 10px; border-radius:4px; font-size:0.8rem; cursor:pointer;">🔄 רענן נתונים</button>
+                    </div>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <table id="examsListTable">
+                        <thead><tr><th style="width:30px;"><input type="checkbox" id="selectAllExams" onchange="toggleSelectAll(this)"></th><th>כותרת המבחן</th><th>תאריך העלאה</th><th>סטטוס במערכת</th><th>פעולות</th></tr></thead>
+                        <tbody><tr><td colspan="5" style="text-align:center; padding:30px; color:#7f8c8d;">טוען מבחנים...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel panel-flex-1">
+                <div class="panel-header">
+                    <span>📝 סטטוס נבחנים והגשות בזמן אמת</span>
+                    <button onclick="fetchSubmissions()" style="background:white; border:1px solid #ddd; padding:5px 10px; border-radius:4px; font-size:0.8rem; cursor:pointer;">🔄 רענן נתונים</button>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <table id="submissionsTable">
+                        <thead><tr><th>שם תלמיד</th><th>ת.ז.</th><th>שם המבחן</th><th>זמן עדכון אחרון</th><th>סטטוס</th><th>פעולות מורה</th></tr></thead>
+                        <tbody><tr><td colspan="6" style="text-align:center; padding:30px; color:#7f8c8d;">טוען הגשות...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Snapshots -->
+    <div id="snapshotsModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 id="snapshotModalTitle">📸 גרסאות שמורות</h3>
+                <button onclick="closeSnapshotsModal()" style="background:#e74c3c;color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;">✖ סגור</button>
+            </div>
+            <div id="snapshotsList"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { CloudService, LiveService } from './js/supabase-service.js?v=2000';
+
+        // --- skeleton rows למהירות טעינה ---
+        function skeletonRows(cols) {
+            return Array(3).fill('').map(() =>
+                `<tr class="skeleton-row">${Array(cols).fill('<td><span class="skel"></span></td>').join('')}</tr>`
+            ).join('');
+        }
+
+        // הוספת וייבוא תלמידים
+        window.addSingleStudent = async () => {
+            const nameInput = document.getElementById('manualStudentName');
+            const idInput = document.getElementById('manualStudentID');
+            const name = nameInput.value.trim(), id = idInput.value.trim();
+            const statusDiv = document.getElementById('importStatus');
+            if (!name || !id) return alert("אנא הזן שם ותעודת זהות של התלמיד.");
+            statusDiv.style.display = 'block'; statusDiv.style.background = '#fef9e7'; statusDiv.style.color = '#f39c12'; statusDiv.innerText = 'שומר בענן...';
+            try {
+                await CloudService.saveStudents([{ id: id, name: name }]);
+                statusDiv.style.background = '#e8f6f3'; statusDiv.style.color = '#16a085'; statusDiv.innerText = `✅ סונכרן בהצלחה!`;
+                nameInput.value = ''; idInput.value = ''; fetchStudentsList();
+            } catch (error) { statusDiv.style.background = '#fdedec'; statusDiv.style.color = '#c0392b'; statusDiv.innerText = `❌ שגיאה: ${error.message}`; }
+        };
+
+        window.importStudentsData = async () => {
+            const fileInput = document.getElementById('excelInput'), sheetsInput = document.getElementById('sheetsInput').value.trim();
+            const file = fileInput.files[0], statusDiv = document.getElementById('importStatus');
+            if (!file && !sheetsInput) return alert("אנא בחר קובץ אקסל או הזן קישור ל-Google Sheets.");
+            statusDiv.style.display = 'block'; statusDiv.style.background = '#fef9e7'; statusDiv.style.color = '#f39c12'; statusDiv.innerText = 'שואב נתונים...';
+            try {
+                let students = [];
+                if (file) {
+                    const data = await file.arrayBuffer(); const workbook = XLSX.read(data, { type: 'array' });
+                    students = parseStudentData(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+                } else if (sheetsInput) {
+                    const match = sheetsInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                    if (!match) throw new Error("קישור אינו תקין.");
+                    const response = await fetch(`https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq?tqx=out:csv`);
+                    if (!response.ok) throw new Error("לא ניתן לגשת לקובץ.");
+                    const workbook = XLSX.read(await response.text(), { type: 'string' });
+                    students = parseStudentData(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+                }
+                if (students.length === 0) throw new Error("לא נמצאו נתונים תקינים.");
+                await CloudService.saveStudents(students);
+                statusDiv.style.background = '#e8f6f3'; statusDiv.style.color = '#16a085'; statusDiv.innerText = `✅ סונכרנו ${students.length} תלמידים!`;
+                fileInput.value = ''; document.getElementById('sheetsInput').value = ''; fetchStudentsList();
+            } catch (error) { statusDiv.style.background = '#fdedec'; statusDiv.style.color = '#c0392b'; statusDiv.innerText = `❌ שגיאה: ${error.message}`; }
+        };
+
+        function parseStudentData(jsonData) { return jsonData.map(row => ({ id: String(row['תעודת זהות'] || row['ID'] || row['ת"ז'] || '').trim(), name: String(row['שם'] || row['Name'] || '').trim() })).filter(s => s.id && s.name && s.id !== "undefined"); }
+
+        // --- 1. תלמידים ---
+        function renderStudents(students) {
+            saveCache('students', students || []);
+            const tbody = document.querySelector('#studentsListTable tbody');
+            const totalBadge = document.getElementById('totalStudentsBadge');
+            if (!students || students.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">אין תלמידים במאגר</td></tr>'; totalBadge.innerText = ''; return; }
+            const validStudents = students.map(s => ({ id: s.id || '?', name: s.name || '?' }));
+            validStudents.sort((a, b) => String(a.name).localeCompare(String(b.name), 'he'));
+            totalBadge.innerText = `סה"כ מורשים במערכת: ${validStudents.length}`;
+            tbody.innerHTML = validStudents.map(s => `<tr><td>${s.name}</td><td>${s.id}</td><td style="text-align:center;"><button onclick="deleteStudentBtn('${s.id}')" class="btn-delete-small">מחק</button></td></tr>`).join('');
+        }
+        window.fetchStudentsList = async () => {
+            const tbody = document.querySelector('#studentsListTable tbody');
+            tbody.innerHTML = skeletonRows(3);
+            try { renderStudents(await CloudService.getStudents()); }
+            catch (error) { tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#c0392b;">שגיאה: ${error.message}</td></tr>`; }
+        };
+
+        window.deleteStudentBtn = async (id) => { if (confirm('האם אתה בטוח שברצונך למחוק תלמיד זה מהמאגר?')) { try { await CloudService.deleteStudent(id); fetchStudentsList(); } catch (e) { alert('שגיאה במחיקה'); } } };
+
+        // --- 2. מבחנים ---
+        function renderExams(exams) {
+            saveCache('exams', exams || []);
+            const tbody = document.querySelector('#examsListTable tbody');
+            if (!exams || exams.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px;">אין מבחנים במאגר.</td></tr>'; return; }
+            exams.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+            tbody.innerHTML = exams.map(e => {
+                const isActive = e.active !== false;
+                const statusBadge = isActive
+                    ? `<span class="status-badge status-active">✅ פעיל לתלמידים</span>`
+                    : `<span class="status-badge status-inactive">🔴 מושהה</span>`;
+                const toggleBtn = isActive
+                    ? `<button class="btn-toggle-on" onclick="toggleExamBtn('${e.id}', true)" title="לחץ להשהות">השהה גישה</button>`
+                    : `<button class="btn-toggle-off" onclick="toggleExamBtn('${e.id}', false)" title="לחץ להפעיל">הפעל גישה</button>`;
+                return `
+                <tr style="opacity: ${isActive ? '1' : '0.65'}" data-exam-id="${e.id}" data-exam-title="${(e.title||'').replace(/"/g,'&quot;')}">
+                    <td style="text-align:center;"><input type="checkbox" class="exam-checkbox" onchange="onExamCheckChange()" value="${e.id}"></td>
+                    <td><strong>${e.title || 'מבחן ללא שם'}</strong></td>
+                    <td>${e.createdAt ? new Date(e.createdAt).toLocaleString('he-IL') : 'לא ידוע'}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div class="action-buttons">
+                            ${toggleBtn}
+                            <button class="btn-check" style="background:#27ae60;" onclick="editExamBtn('${e.id}')">✏️ ערוך</button>
+                            <button class="btn-check" style="background:#2980b9;" onclick="downloadSingleDoc('${e.id}')">📄 DOCX</button>
+                            <button class="btn-clone" onclick="duplicateExamBtn('${e.id}')">📋 שכפל</button>
+                            <button class="btn-delete-small" onclick="deleteExamBtn('${e.id}')">מחק</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        window.fetchExamsList = async () => {
+            const tbody = document.querySelector('#examsListTable tbody');
+            tbody.innerHTML = skeletonRows(5);
+            try { renderExams(await CloudService.getAllExams()); }
+            catch (error) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#c0392b;">שגיאה: ${error.message}</td></tr>`; }
+        };
+
+        window.toggleExamBtn = async (id, currentActive) => {
+            try {
+                await CloudService.toggleExamActive(id, currentActive);
+                fetchExamsList();
+            } catch (e) { alert('שגיאה בעדכון סטטוס המבחן: ' + e.message); }
+        };
+
+        window.deleteExamBtn = async (id) => {
+            if (confirm('אזהרה: האם אתה בטוח שברצונך למחוק את המבחן לחלוטין מהשרת?\nלאחר המחיקה, המבחן לא יופיע יותר אצל התלמידים.')) {
+                try { await CloudService.deleteExam(id); fetchExamsList(); } catch (e) { alert('שגיאה במחיקת המבחן: ' + e.message); }
+            }
+        };
+
+        // --- 3. הגשות ---
+        function renderSubmissions(subs) {
+            saveCache('submissions', subs || []);
+            const tbody = document.querySelector('#submissionsTable tbody');
+            if (!subs || subs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px;">אין הגשות כרגע במערכת.</td></tr>'; return; }
+            subs.sort((a, b) => (Number(b.lastUpdate) || 0) - (Number(a.lastUpdate) || 0));
+            tbody.innerHTML = subs.map(sub => {
+                let statusLabel = 'במהלך פתרון', statusClass = 'status-progress';
+                if (sub.status === 'submitted') { statusLabel = 'הוגש סופית'; statusClass = 'status-submitted'; }
+                else if (sub.status === 'graded') { statusLabel = 'נבדק ע"י מורה'; statusClass = 'status-submitted'; }
+                const dateStr = sub.lastUpdate ? new Date(sub.lastUpdate).toLocaleString('he-IL') : 'לא ידוע';
+                const subId = `${sub.studentID}_${sub.examID}`;
+                return `<tr>
+                    <td><strong>${sub.studentName || '---'}</strong></td>
+                    <td>${sub.studentID || '---'}</td>
+                    <td>${sub.examTitle || sub.examID || 'מבחן'}</td>
+                    <td><span style="font-size:0.85rem; color:#95a5a6;">${dateStr}</span></td>
+                    <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-check" style="background:#8e44ad;" onclick="window.open('grade_exam.html?subId=${subId}', '_blank')">פתח לבדיקה</button>
+                            <button class="btn-check" style="background:#16a085;" onclick="openSnapshotsModal('${sub.studentID}','${sub.examID}','${sub.studentName||sub.studentID}')">📸 גרסאות</button>
+                            <button class="btn-delete-small" onclick="deleteSubmissionBtn('${subId}')">מחק הגשה</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        window.fetchSubmissions = async () => {
+            const tbody = document.querySelector('#submissionsTable tbody');
+            tbody.innerHTML = skeletonRows(6);
+            try { renderSubmissions(await CloudService.getSubmissions()); }
+            catch (error) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#c0392b;">שגיאה: ${error.message}</td></tr>`; }
+        };
+
+        window.deleteSubmissionBtn = async (subID) => {
+            if (confirm('אזהרה: האם אתה בטוח שברצונך למחוק את נתוני ההגשה של תלמיד זה?\nהפעולה תמחק את כל התשובות שלו ללא אפשרות שחזור!')) {
+                try { await CloudService.deleteSubmission(subID); fetchSubmissions(); } catch (e) { alert('שגיאה במחיקת ההגשה: ' + e.message); }
+            }
+        };
+
+        window.downloadTemplate = () => {
+            const ws = XLSX.utils.json_to_sheet([{ "שם": "ישראל ישראלי", "תעודת זהות": "123456789" }]);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "תלמידים"); XLSX.writeFile(wb, "פורמט_תלמידים_לדוגמה.xlsx");
+        };
+
+        window.editExamBtn = async (examId) => {
+            try {
+                const exam = await CloudService.getExam(examId);
+                if (!exam || !exam.state) {
+                    alert('לא נמצאו נתוני עריכה עבור מבחן זה (ייתכן שהועלה בגרסה ישנה).');
+                    return;
+                }
+                // Store exam data + id in sessionStorage for editor to pick up
+                sessionStorage.setItem('editExamState', JSON.stringify(exam.state));
+                sessionStorage.setItem('editExamId', examId);
+                sessionStorage.setItem('editExamMeta', JSON.stringify(exam.meta || {}));
+                window.location.href = 'editor.html';
+            } catch (e) {
+                alert('שגיאה בטעינת המבחן לעריכה: ' + e.message);
+            }
+        };
+
+        // ---- שכפול מבחן ----
+        window.duplicateExamBtn = async (id) => {
+            try {
+                const newId = await CloudService.duplicateExam(id);
+                alert('✅ המבחן שוכפל בהצלחה! עותק חדש נוסף למאגר.');
+                fetchExamsList();
+            } catch(e) { alert('שגיאה בשכפול: ' + e.message); }
+        };
+
+        // ---- בחירה מרובה + הורדת DOCX ----
+        window.toggleSelectAll = (cb) => {
+            document.querySelectorAll('.exam-checkbox').forEach(c => c.checked = cb.checked);
+            onExamCheckChange();
+        };
+        window.onExamCheckChange = () => {
+            const any = [...document.querySelectorAll('.exam-checkbox')].some(c => c.checked);
+            document.getElementById('btnBulkDownload').style.display = any ? 'inline-block' : 'none';
+        };
+        // ---- עזר: בניית תוכן DOCX ממצב מבחן ----
+        function buildDocxContent(s, title) {
+            let docHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><style>body{font-family:Arial;direction:rtl;font-size:12pt;} h1,h2{text-align:center;} .q{border:1px solid #ccc;padding:10px;margin:10px 0;page-break-inside:avoid;} .sub{margin-right:20px;border-right:3px solid #ddd;padding-right:10px;margin-top:8px;}</style></head><body>`;
+            docHtml += `<h1>${s.examTitle || title}</h1>`;
+            if (s.instructions && s.instructions.general) {
+                docHtml += `<div style='background:#f0f0f0;padding:10px;margin:10px 0;'><strong>הנחיות כלליות:</strong><br>${s.instructions.general.replace(/\n/g,'<br>')}</div>`;
+            }
+            (s.parts || [{id:'A', name:'חלק א'}]).forEach(part => {
+                docHtml += `<h2>${part.name}</h2>`;
+                if (s.instructions && s.instructions.parts && s.instructions.parts[part.id]) {
+                    docHtml += `<p style='color:#555;'>${s.instructions.parts[part.id]}</p>`;
+                }
+                const qs = (s.questions || []).filter(q => q.part === part.id || (!q.part));
+                qs.forEach((q, qi) => {
+                    docHtml += `<div class='q'><p><strong>שאלה ${qi+1}</strong> (${q.points||0} נקודות)</p><p>${(q.text||'').replace(/\n/g,'<br>')}</p>`;
+                    if (q.subQuestions && q.subQuestions.length) {
+                        q.subQuestions.forEach((sq, si) => {
+                            const lbl = String.fromCharCode(97+si);
+                            docHtml += `<div class='sub'><p><strong>סעיף ${lbl}'</strong> (${sq.points||0} נק'): ${(sq.text||'').replace(/\n/g,'<br>')}</p><p style='color:#aaa;height:30px;border-bottom:1px solid #ddd;'></p></div>`;
+                        });
+                    } else {
+                        docHtml += `<p style='color:#aaa;height:60px;border-bottom:1px solid #ddd;'></p>`;
+                    }
+                    docHtml += `</div>`;
+                });
+            });
+            docHtml += `</body></html>`;
+            return docHtml;
+        }
+        function triggerDocxDownload(docHtml, filename) {
+            const blob = new Blob(['\ufeff', docHtml], {type:'application/msword'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename.replace(/[/\\\\:*?"<>|]/g,'_') + '.doc';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+
+        // ---- הורדת DOCX למבחן בודד ----
+        window.downloadSingleDoc = async (examId) => {
+            const row = document.querySelector(`tr[data-exam-id="${examId}"]`);
+            const title = row ? row.dataset.examTitle : examId;
+            try {
+                const exam = await CloudService.getExam(examId);
+                if (!exam || !exam.state) return alert('לא נמצאו נתוני מבחן (ייתכן גרסה ישנה).');
+                triggerDocxDownload(buildDocxContent(exam.state, title), exam.state.examTitle || title);
+            } catch(e) { alert('שגיאה בהורדה: ' + e.message); }
+        };
+
+        window.bulkDownloadDocs = async () => {
+            const checked = [...document.querySelectorAll('.exam-checkbox:checked')];
+            if(!checked.length) return;
+            const btn = document.getElementById('btnBulkDownload');
+            btn.innerText = '⏳ מוריד...'; btn.disabled = true;
+            let downloaded = 0;
+            for (const cb of checked) {
+                const examId = cb.value;
+                const row = cb.closest('tr');
+                const title = row ? (row.dataset.examTitle || examId) : examId;
+                try {
+                    const exam = await CloudService.getExam(examId);
+                    if (!exam || !exam.state) { console.warn('No state for', examId); continue; }
+                    triggerDocxDownload(buildDocxContent(exam.state, title), exam.state.examTitle || title);
+                    downloaded++;
+                    await new Promise(r => setTimeout(r, 500));
+                } catch(e) { console.error('Download error for', examId, e); }
+            }
+            btn.innerText = '📥 הורד נבחרים DOCX'; btn.disabled = false;
+            if (downloaded) alert(`✅ הורדו ${downloaded} קבצים בהצלחה.`);
+        };
+
+        // ---- Snapshots (גרסאות שמורות) ----
+        window.openSnapshotsModal = async (studentID, examID, studentName) => {
+            const modal = document.getElementById('snapshotsModal');
+            const list = document.getElementById('snapshotsList');
+            const title = document.getElementById('snapshotModalTitle');
+            title.innerText = `📸 גרסאות שמורות — ${studentName}`;
+            list.innerHTML = '<p style="text-align:center;">טוען גרסאות...</p>';
+            modal.style.display = 'flex';
+            try {
+                const snaps = await CloudService.getSnapshots(studentID, examID);
+                if(!snaps || !snaps.length) { list.innerHTML = '<p style="text-align:center;color:#95a5a6;">אין גרסאות שמורות עדיין.</p>'; return; }
+                list.innerHTML = snaps.map((s, idx) => {
+                    const date = new Date(s.savedAt).toLocaleString('he-IL');
+                    const ansCount = s.answers ? Object.values(s.answers).filter(v=>v&&v.trim()).length : 0;
+                    return `<div class="snapshot-row">
+                        <div>
+                            <strong>גרסה ${snaps.length - idx}</strong> &nbsp;
+                            <span style="color:#7f8c8d;font-size:0.85rem;">${date}</span><br>
+                            <small style="color:#95a5a6;">${ansCount} שדות מולאו</small>
+                        </div>
+                        <button class="btn-restore" onclick="restoreSnapshot('${studentID}','${examID}','${s.id}')">♻️ שחזר גרסה זו</button>
+                    </div>`;
+                }).join('');
+                // store for restore
+                window._currentSnapshots = { studentID, examID, snaps };
+            } catch(e) { list.innerHTML = `<p style="color:#c0392b;">שגיאה: ${e.message}</p>`; }
+        };
+        window.closeSnapshotsModal = () => {
+            document.getElementById('snapshotsModal').style.display = 'none';
+        };
+        window.restoreSnapshot = async (studentID, examID, snapId) => {
+            if(!confirm('האם לשחזר גרסה זו? הנתונים הנוכחיים של ההגשה יוחלפו.')) return;
+            try {
+                const { snaps } = window._currentSnapshots;
+                const snap = snaps.find(s => s.id === snapId);
+                if(!snap) return alert('גרסה לא נמצאה.');
+                const existing = await CloudService.getSubmission(`${studentID}_${examID}`) || {};
+                await CloudService.saveSubmission({
+                    ...existing,
+                    studentID, examID,
+                    answers: snap.answers,
+                    lastUpdate: Date.now(),
+                    restoredFrom: snap.savedAt
+                });
+                alert('✅ הגרסה שוחזרה בהצלחה! הבדיקה הבאה תציג את הנתונים המשוחזרים.');
+                closeSnapshotsModal();
+            } catch(e) { alert('שגיאה בשחזור: ' + e.message); }
+        };
+
+        // --- מטמון מקומי: הצגה מיידית של מה שנטען בפעם הקודמת ---
+        const CACHE_PREFIX = 'adminCache_';
+        function saveCache(key, data) { try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data)); } catch (e) {} }
+        function loadCache(key) { try { const v = localStorage.getItem(CACHE_PREFIX + key); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+        function showTableError(selector, cols, error) {
+            document.querySelector(selector).innerHTML = `<tr><td colspan="${cols}" style="text-align:center; color:#c0392b;">שגיאה: ${error.message}</td></tr>`;
+        }
+
+        // --- טעינה, עדכון בזמן אמת ורענון כל 40 שניות ---
+        window.onload = async () => {
+            // 1. הצגה מיידית מהמטמון המקומי (אם יש), אחרת skeleton
+            const cs = loadCache('students'); if (cs) renderStudents(cs); else document.querySelector('#studentsListTable tbody').innerHTML = skeletonRows(3);
+            const ce = loadCache('exams'); if (ce) renderExams(ce); else document.querySelector('#examsListTable tbody').innerHTML = skeletonRows(5);
+            const cb = loadCache('submissions'); if (cb) renderSubmissions(cb); else document.querySelector('#submissionsTable tbody').innerHTML = skeletonRows(6);
+
+            // 2. טעינה ראשונית + עדכון בזמן אמת באותה האזנה (בלי הורדה כפולה של הנתונים)
+            const loaded = { students: false, exams: false, submissions: false };
+            LiveService.watchStudents(d => { loaded.students = true; renderStudents(d); }, e => showTableError('#studentsListTable tbody', 3, e));
+            LiveService.watchAllExams(d => { loaded.exams = true; renderExams(d); }, e => showTableError('#examsListTable tbody', 5, e));
+            LiveService.watchSubmissions(d => { loaded.submissions = true; renderSubmissions(d); }, e => showTableError('#submissionsTable tbody', 6, e));
+
+            // 3. גיבוי: אם ההאזנה לא החזירה נתונים תוך 8 שניות, טוענים בדרך הרגילה
+            setTimeout(() => {
+                if (!loaded.students) fetchStudentsList();
+                if (!loaded.exams) fetchExamsList();
+                if (!loaded.submissions) fetchSubmissions();
+            }, 8000);
+
+            // 4. רענון גיבוי כל 40 שניות (שקט, בלי skeleton). מדלג כשהלשונית ברקע, כדי לא להוריד נתונים סתם
+            const REFRESH_MS = 40000;
+            setInterval(async () => {
+                if (document.hidden) return;
+                try {
+                    const { students, exams, submissions } = await CloudService.getDashboardData();
+                    renderStudents(students);
+                    renderExams(exams);
+                    renderSubmissions(submissions);
+                } catch (err) { console.error('Refresh error:', err); }
+            }, REFRESH_MS);
+        };
+    </script>
+</body>
+</html>

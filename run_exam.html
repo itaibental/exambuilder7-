@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>טוען מבחן...</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="js/utils.js"></script>
+    <script src="js/generator-html.js"></script>
+    <style>
+        body { font-family: 'Rubik', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f4f6f8; margin: 0; color: #2c3e50; }
+        .loader-box { text-align: center; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eee; }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: #3498db; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loader-box">
+        <div class="spinner"></div>
+        <h2>טוען את המבחן שלך...</h2>
+        <p>אנא המתן בזמן שהנתונים נשאבים מהענן ☁️</p>
+    </div>
+
+    <script type="module">
+        import { CloudService } from './js/supabase-service.js?v=2000';
+
+        async function initExam() {
+            const examId = localStorage.getItem('activeExamID');
+            const studentName = localStorage.getItem('studentName') || 'תלמיד לא ידוע';
+            const studentID = localStorage.getItem('studentID');
+
+            if (!examId || !studentID) {
+                alert('חסרים פרטי הזדהות. תועבר חזרה למסך הכניסה.');
+                window.location.href = 'student_login.html';
+                return;
+            }
+
+            try {
+                const examDoc = await CloudService.getExamHtml(examId).then(html => html ? { htmlContent: html } : CloudService.getExam(examId));
+                
+                if (!examDoc) {
+                    alert('קובץ המבחן לא נמצא במאגר המערכת.');
+                    window.location.href = 'student_login.html';
+                    return;
+                }
+
+                // פונקציה משותפת: שחזור תשובות שמורות לאחר טעינת ה-HTML
+                // עובדת גם עבור מבחנים ישנים שנוצרו לפני העדכון
+                async function restoreAnswersInExam() {
+                    try {
+                        const subId = studentID + '_' + examId;
+                        const sub = await CloudService.getSubmission(subId);
+                        if (!sub || !sub.answers || sub.status === 'submitted') return;
+                        let count = 0;
+                        for (const [id, val] of Object.entries(sub.answers)) {
+                            const el = document.getElementById(id);
+                            if (el && val) { el.value = val; count++; }
+                        }
+                        if (count > 0) {
+                            // עדכון נורית החיווי אם קיימת (מבחן חדש)
+                            const dot = document.getElementById('cloudDot');
+                            const dotTxt = document.getElementById('cloudDotText');
+                            if (dot) dot.style.background = '#27ae60';
+                            if (dotTxt) dotTxt.innerText = `✅ תשובות שוחזרו (${count})`;
+                            setTimeout(() => {
+                                if (dot) dot.style.background = '#bdc3c7';
+                                if (dotTxt) dotTxt.innerText = 'ממתין לשמירה...';
+                            }, 5000);
+                            console.log(`✅ שוחזרו ${count} תשובות שמורות`);
+                        }
+                    } catch(e) { console.warn('restoreAnswers error:', e); }
+                }
+
+                // בדיקה: האם זה מבחן חדש שיש לו HTML מוכן?
+                if (examDoc.htmlContent) {
+                    document.open();
+                    document.write(examDoc.htmlContent);
+                    document.close();
+
+                    setTimeout(async () => {
+                        const nameField = document.getElementById('studentNameField');
+                        if(nameField) nameField.value = studentName;
+                        document.title = `מבחן - ${studentName}`;
+                        // שחזור תשובות — גם למבחן עם HTML מוכן
+                        await restoreAnswersInExam();
+                    }, 500);
+                } 
+                // גיבוי: האם זה מבחן ישן שצריך לבנות את ה-HTML שלו עכשיו?
+                else if (examDoc.state) {
+                    console.log("Old exam format detected. Building HTML dynamically...");
+                    const state = examDoc.state;
+                    const meta = state.meta || { duration: 90, unlockCodeHash: '', teacherEmail: '', driveLink: '' };
+
+                    const htmlString = HTMLBuilder.build(
+                        studentName, 
+                        state.questions || [], 
+                        state.instructions || {general: '', parts: {}}, 
+                        state.examTitle || 'מבחן', 
+                        state.logoData, 
+                        state.solutionDataUrl, 
+                        meta.duration, 
+                        meta.unlockCodeHash, 
+                        state.parts || [], 
+                        meta.teacherEmail, 
+                        meta.driveLink, 
+                        examDoc, 
+                        state.theme || {}
+                    );
+
+                    document.open();
+                    document.write(htmlString);
+                    document.close();
+
+                    // שחזור תשובות — גם למבחן ישן שנבנה דינמית
+                    setTimeout(async () => {
+                        await restoreAnswersInExam();
+                    }, 500);
+                } else {
+                    throw new Error("קובץ המבחן ריק או פגום.");
+                }
+
+            } catch (error) {
+                console.error("Error loading exam:", error);
+                alert("אירעה שגיאה במשיכת המבחן מהמאגר: " + error.message);
+                window.location.href = 'student_login.html';
+            }
+        }
+
+        window.onload = initExam;
+    </script>
+</body>
+</html>

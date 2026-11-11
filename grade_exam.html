@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>בדיקת מבחן</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Rubik', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #f4f6f8; margin: 0; }
+        .loader-box { text-align: center; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: #8e44ad; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loader-box">
+        <div class="spinner"></div>
+        <h2>מכין את המבחן לבדיקה...</h2>
+        <p>שואב תשובות מהענן ומרכיב את טופס הבדיקה.</p>
+    </div>
+
+    <script type="module">
+        import { CloudService } from './js/supabase-service.js?v=2000';
+
+        async function initGrading() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const subId = urlParams.get('subId');
+            
+            if(!subId) return alert('מזהה הגשה חסר בקישור.');
+
+            try {
+                const sub = await CloudService.getSubmission(subId);
+                if(!sub) return alert('לא נמצאה הגשה מתאימה.');
+
+                const exam = await CloudService.getExam(sub.examID);
+                if(!exam || !exam.htmlContent) return alert('תוכן המבחן המקורי לא נמצא במאגר.');
+
+                document.open();
+                document.write(exam.htmlContent);
+                document.close();
+
+                setTimeout(() => {
+                    localStorage.setItem('grading_studentID', sub.studentID);
+                    localStorage.setItem('grading_examID', sub.examID);
+
+                    // 1. הגדרת מצב בדיקה באופן גורף
+                    document.body.dataset.status = 'grading';
+
+                    // 2. ביטול אקטיבי של הטיימר והסתרת מסך הפתיחה (עבור מבחנים ישנים)
+                    if (typeof window.timerInterval !== 'undefined') clearInterval(window.timerInterval);
+                    
+                    const timerBadge = document.getElementById('timerBadge');
+                    if (timerBadge) timerBadge.style.display = 'none';
+                    
+                    const startScrn = document.getElementById('startScreen');
+                    if (startScrn) startScrn.style.display = 'none';
+                    
+                    const mainCont = document.getElementById('mainContainer');
+                    if (mainCont) mainCont.style.filter = 'none';
+
+                    // שיבוץ שם התלמיד
+                    const nameField = document.getElementById('studentNameField');
+                    if (nameField) nameField.value = sub.studentName || sub.studentID;
+
+                    // שיבוץ תשובות
+                    if (sub.answers) {
+                        for (const [id, val] of Object.entries(sub.answers)) {
+                            const el = document.getElementById(id);
+                            if (el) { el.value = val; el.innerHTML = val; }
+                        }
+                    }
+
+                    // שיבוץ ציונים קודמים
+                    if (sub.teacherGrades) {
+                        for (const [id, val] of Object.entries(sub.teacherGrades)) {
+                            const el = document.getElementById(id);
+                            if (el) el.value = val;
+                        }
+                    }
+                    if (sub.teacherComments) {
+                        for (const [id, val] of Object.entries(sub.teacherComments)) {
+                            const el = document.getElementById(id);
+                            if (el) el.value = val;
+                        }
+                    }
+
+                    if (typeof window.enableGradingUI === 'function') {
+                        window.enableGradingUI();
+                        if(typeof window.calcTotal === 'function') window.calcTotal();
+                    }
+                    
+                    document.title = `בדיקה: ${sub.studentName || 'תלמיד'}`;
+                }, 500);
+
+            } catch (err) {
+                console.error("Grading error:", err);
+                alert('אירעה שגיאה בהכנת המבחן לבדיקה.');
+            }
+        }
+        window.onload = initGrading;
+    </script>
+</body>
+</html>

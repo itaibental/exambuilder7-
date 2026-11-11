@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מבחן מקוון</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f8; }
+        .exam-container { max-width: 900px; margin: 40px auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        #authScreen { text-align: center; padding: 60px 20px; }
+        #examScreen { display: none; }
+        #examHeader, #examParts, #examQuestions { margin-bottom: 30px; }
+        .timer { position: fixed; top: 20px; right: 20px; background: var(--primary); color: white; padding: 10px 20px; border-radius: 20px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="exam-container">
+        <!-- Authentication Screen -->
+        <div id="authScreen">
+            <h1 id="authTitle">טוען...</h1>
+            <p>יש להזין תעודת זהות כדי להתחיל את המבחן.</p>
+            <input type="text" id="studentIdInput" placeholder="הקלד ת.ז." style="width: 250px; text-align:center; margin: 20px 0;">
+            <button onclick="ExamRunner.startExam()" class="btn-download">התחל מבחן</button>
+            <p id="authError" style="color: red; margin-top: 15px;"></p>
+        </div>
+
+        <!-- Exam Screen -->
+        <div id="examScreen">
+            <div class="timer" id="timer">--:--</div>
+            <header id="examHeader"></header>
+            <div id="examParts"></div>
+            <div id="examQuestions"></div>
+            <button onclick="ExamRunner.submitExam()" class="btn-download" style="width:100%; background: #27ae60;">הגש מבחן</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/exam-runner.js"></script>
+</body>
+</html>

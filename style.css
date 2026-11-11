@@ -1,0 +1,237 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap');
+
+/* ========================================== */
+/* === 1. משתני עיצוב (Variables) === */
+/* ========================================== */
+:root {
+    --primary: #2c3e50;
+    --primary-dark: #1a252f;
+    --sidebar-bg: #2c3e50;
+    --sidebar-border: #1a252f;
+    --accent: #3498db;
+    --accent-hover: #2980b9;
+    --accent-light: #ebf5fb;
+    --bg-page: #f4f6f8;
+    --success: #27ae60;
+    --danger: #e74c3c;
+    --border: #bdc3c7;
+    --shadow: 0 4px 6px rgba(0,0,0,0.05);
+    
+    /* משתנים דינמיים למבחן */
+    --exam-bg: #f4f6f8;
+    --header-color: #2c3e50;
+}
+
+/* ========================================== */
+/* === 2. הגדרות כלליות === */
+/* ========================================== */
+* { box-sizing: border-box; }
+
+body { 
+    margin: 0; 
+    font-family: 'Rubik', sans-serif; 
+    background-color: var(--bg-page); 
+    color: var(--primary); 
+    display: flex; 
+    flex-direction: column; 
+    min-height: 100vh; 
+    overflow-x: hidden;
+}
+
+.main-app-header { 
+    background-color: var(--accent); 
+    color: white; 
+    padding: 15px 20px; 
+    text-align: center; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+    flex-shrink: 0; 
+    position: relative; 
+    z-index: 100; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+}
+.main-app-header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+.main-footer { background: var(--primary-dark); color: #7f8c8d; text-align: center; padding: 10px; font-size: 0.8rem; z-index: 100; position: relative; }
+
+/* פקדים כלליים */
+input[type="text"], input[type="number"], input[type="email"], input[type="password"], textarea, select { 
+    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 1rem; margin-bottom: 10px; transition: 0.2s;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2); }
+input[type="color"] { padding: 0; border: none; height: 40px; cursor: pointer; background: transparent; width: 100%; border-radius: 6px; }
+
+label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: inherit; font-weight: bold; }
+
+/* כפתורים */
+button { font-family: 'Rubik', sans-serif; cursor: pointer; transition: all 0.2s; }
+.btn-download { width: 100%; background: var(--success); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.btn-download:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+.btn-secondary-small { background: #95a5a6; color: white; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; border: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.btn-secondary-small:hover { background: #7f8c8d; }
+.btn-add-big { width: 100%; padding: 20px; background: white; border: 2px dashed #bdc3c7; color: #7f8c8d; font-size: 1.2rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s; font-weight: bold; }
+.btn-add-big:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+
+/* ========================================== */
+/* === 3. פריסת עורך המבחנים (Editor) === */
+/* ========================================== */
+.container { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 60px); }
+.col-panel { display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.scroll-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; }
+.col-right { width: 300px; min-width: 250px; background-color: var(--sidebar-bg); border-left: 1px solid var(--sidebar-border); color: #ecf0f1; }
+.col-left { width: 250px; min-width: 200px; background-color: var(--primary-dark); color: white; }
+.col-middle { flex: 1; background-color: var(--exam-bg); z-index: 10; padding: 30px; overflow-y: auto; position: relative; transition: background-color 0.3s; }
+
+.col-right label, .col-left label { color: #bdc3c7; }
+.col-right input, .col-right textarea, .col-right select { background: #34495e; border-color: #46637f; color: white; }
+.col-right input:focus { border-color: var(--accent); }
+
+/* ידיות גרירה (Resizers) */
+.resizer { position: absolute; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 100; background: transparent; transition: background 0.2s; }
+.resizer-right-col { left: -5px; } 
+.resizer-left-col { right: 0; }
+.resizer:hover, .resizer.resizing { background: rgba(0,0,0,0.2); }
+
+/* קטגוריות מתקפלות בעורך (Details) */
+.editor-category { background: rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+.editor-category summary { padding: 12px 15px; font-weight: bold; cursor: pointer; user-select: none; background: rgba(0,0,0,0.1); color: white; }
+.editor-category summary:hover { background: rgba(0,0,0,0.2); }
+.editor-category .form-group { padding: 15px; margin-bottom: 0; border-top: 1px solid rgba(255,255,255,0.05); }
+
+/* קופסת סטטיסטיקה */
+.stats-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-top: 20px; }
+.stats-box h3 { margin: 0 0 15px 0; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+.stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #bdc3c7; }
+.total-row { border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-top: 10px; font-weight: bold; font-size: 1.1rem; color: white; display: flex; justify-content: space-between; }
+
+/* סרגל עיצוב צף (Sticky Toolbar) */
+.sticky-toolbar { position: sticky; top: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px); padding: 10px 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); z-index: 900; margin-bottom: 25px; display: flex; gap: 8px; align-items: center; border: 1px solid #eee; }
+.sticky-toolbar button { background: #f8f9fa; border: 1px solid #e0e0e0; color: #2c3e50; padding: 8px 15px; border-radius: 6px; font-size: 1rem; display: flex; align-items: center; gap: 5px; margin-bottom: 0; }
+.sticky-toolbar button:hover { background: #ebf5fb; color: var(--accent); border-color: var(--accent); transform: translateY(-1px); }
+.toolbar-label { font-size: 0.9rem; font-weight: bold; color: #7f8c8d; margin-left: 10px; }
+.separator { width: 1px; height: 24px; background: #e0e0e0; margin: 0 10px; }
+
+/* הדר המבחן (Preview) */
+#previewHeader { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 30px; border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 20px; }
+#previewLogo { max-height: 120px; max-width: 100%; margin-bottom: 15px; border-radius: 8px; }
+#previewExamTitle { font-size: 2.5rem; color: var(--header-color); margin: 0 0 15px 0; }
+#studentNameInput { width: 100%; max-width: 400px; text-align: center; background: #fff; border: 1px solid #ddd; }
+
+/* טקסטים ועריכת הוראות */
+.editor-section { margin-bottom: 25px; }
+.section-label { font-size: 0.9rem; font-weight: bold; color: #7f8c8d; text-transform: uppercase; margin-bottom: 8px; }
+.editable-textarea { width: 100%; border: 1px dashed #bdc3c7; background: white; padding: 15px; font-size: 1rem; color: #2c3e50; border-radius: 8px; resize: vertical; min-height: 80px; transition: 0.2s; }
+.instructions-editor { background: #fffde7; border-color: #f1c40f; }
+.part-instructions-editor { background: #e8f6f3; border-color: #1abc9c; margin-bottom: 20px; }
+
+/* טאבים של פרקים (Parts Manager) */
+.parts-manager { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+.tabs { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
+.tab { padding: 10px 20px; background: #bdc3c7; color: white; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: bold; transition: 0.2s; user-select: none; }
+.tab.active { background: var(--accent); transform: scale(1.05); transform-origin: bottom; }
+.tab:hover:not(.active) { background: #95a5a6; }
+.btn-icon-add { background: var(--success); color: white; width: 35px; height: 35px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 1rem; }
+
+/* כותרת הפרק הנוכחי */
+.part-header-editor { display: flex; align-items: center; gap: 15px; background: white; padding: 15px; border-radius: 10px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.part-name-input { font-size: 1.5rem; font-weight: bold; border: none; border-bottom: 2px dashed #ddd; padding: 5px; color: var(--header-color); width: auto; min-width: 250px; background: transparent; margin-bottom: 0; }
+.part-name-input:focus { border-bottom-color: var(--accent); }
+.btn-delete-part { background: #ffebee; color: var(--danger); border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.btn-delete-part:hover { background: #ffcdd2; }
+
+/* ========================================== */
+/* === 4. עיצוב שאלות (Question Cards) === */
+/* ========================================== */
+.question-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eee; border-right: 5px solid #bdc3c7; transition: 0.3s; position: relative; }
+.question-card:focus-within { border-color: var(--accent); border-right-color: var(--accent); box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15); }
+
+.card-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.q-number-badge { font-weight: 900; color: #7f8c8d; font-size: 1.2rem; background: #f4f6f8; padding: 5px 15px; border-radius: 20px; }
+.card-actions-top button { background: transparent; border: none; color: #95a5a6; font-size: 1.2rem; margin-right: 10px; cursor: pointer; transition: 0.2s; padding: 0; }
+.card-actions-top button:hover { color: var(--danger); transform: scale(1.1); }
+
+.q-main-input { width: 100%; min-height: 100px; border: 1px solid transparent; font-size: 1.1rem; background: #fdfdfd; padding: 10px; border-radius: 8px; margin-bottom: 15px; resize: vertical; }
+.q-main-input:focus { border-color: var(--accent); background: white; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02); }
+
+/* מדיה בתוך שאלות */
+.media-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee; }
+.media-inputs { display: flex; gap: 15px; }
+.media-inputs input { margin-bottom: 0; }
+.media-preview { margin-top: 15px; text-align: center; }
+.media-preview img { max-height: 200px; border-radius: 8px; box-shadow: var(--shadow); }
+
+/* תתי שאלות (Sub Questions) */
+.sub-qs-container { margin-top: 20px; padding-right: 20px; border-right: 3px solid #eee; }
+.sub-q-item { background: #fff; margin-bottom: 15px; padding: 15px; border: 1px solid #eee; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+.sub-q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--accent); }
+.sub-q-input { border: 1px dashed #ddd; min-height: 60px; font-size: 1rem; background: #fafafa; margin-bottom: 10px; }
+.sub-q-media-inputs { display: flex; gap: 10px; background: #fdfdfd; padding: 10px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 10px; }
+.sub-q-media-inputs input { margin-bottom: 0; }
+
+.points-input-group { display: flex; align-items: center; gap: 10px; background: #f4f6f8; padding: 5px 15px; border-radius: 20px; }
+.points-input { width: 70px !important; text-align: center; font-weight: bold; padding: 5px; margin: 0; border: 1px solid #ccc; border-radius: 4px; }
+
+.model-answer-area textarea { background: #fffdf5; border: 1px solid #ffeeba; font-size: 0.95rem; color: #856404; min-height: 80px; margin-top: 15px; }
+.btn-add-sub-inline { background: white; border: 1px dashed var(--accent); color: var(--accent); padding: 8px 15px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; font-weight: bold; margin-top: 10px; }
+.btn-add-sub-inline:hover { background: var(--accent-light); }
+.card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; }
+
+/* ========================================== */
+/* === 5. ממשק ניהול ומנהל (Admin Layout) === */
+/* ========================================== */
+.admin-layout { display: flex; flex-direction: row; gap: 20px; padding: 20px; flex: 1; height: calc(100vh - 60px); }
+.admin-layout > .panel:first-child { width: 350px; flex-shrink: 0; }
+.admin-layout > .panel:last-child { flex: 1; }
+
+.panel { background: white; border-radius: 12px; display: flex; flex-direction: column; box-shadow: var(--shadow); border: 1px solid #eee; overflow: hidden; }
+.panel-header { background: #fafafa; padding: 15px 20px; border-bottom: 1px solid #eee; font-weight: bold; font-size: 1.1rem; color: var(--primary); display: flex; justify-content: space-between; align-items: center; }
+.panel-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+.file-drop-area { border: 2px dashed #bdc3c7; border-radius: 8px; padding: 30px; text-align: center; background: #fcfcfc; transition: all 0.2s; margin-bottom: 15px; }
+.file-drop-area:hover { border-color: var(--accent); background: var(--accent-light); }
+
+table { width: 100%; border-collapse: collapse; background: white; }
+th { background: #f8f9fa; padding: 15px 12px; text-align: right; border-bottom: 2px solid #ddd; color: #7f8c8d; font-size: 0.95rem; }
+td { padding: 15px 12px; border-bottom: 1px solid #eee; font-size: 0.95rem; color: #2c3e50; }
+tr:hover td { background: #fdfdfd; }
+
+.status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
+.status-submitted { background: #e8f6f3; color: #16a085; }
+.status-progress { background: #fef9e7; color: #f39c12; }
+
+.btn-check { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; }
+.btn-check:hover { background: var(--accent-hover); box-shadow: 0 2px 5px rgba(52,152,219,0.3); }
+
+/* ========================================== */
+/* === 6. ממשק תלמיד (Student Login) === */
+/* ========================================== */
+.login-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; background: #f4f6f8; }
+.login-card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 450px; text-align: center; border: 1px solid #eee; }
+.id-input { width: 100%; padding: 15px; font-size: 1.2rem; border: 2px solid #eee; border-radius: 8px; margin-bottom: 20px; text-align: center; transition: 0.2s; }
+.id-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+.exam-item { background: white; border: 1px solid #eee; padding: 20px; margin-top: 15px; border-radius: 12px; cursor: pointer; text-align: right; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+.exam-item:hover { border-color: var(--accent); background: #fcfcfc; box-shadow: 0 5px 15px rgba(52,152,219,0.1); transform: translateY(-3px); }
+.exam-title { font-weight: 900; font-size: 1.2rem; color: var(--primary); margin-bottom: 8px; }
+.exam-date { font-size: 0.9rem; color: #7f8c8d; }
+
+/* ========================================== */
+/* === 7. התראות ושונות (Toasts & Scrollbar) === */
+/* ========================================== */
+.toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.toast { background: white; border-right: 5px solid var(--accent); padding: 15px 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-weight: bold; transform: translateX(-150%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.toast.visible { transform: translateX(0); }
+.toast.success { border-right-color: var(--success); }
+.toast.error { border-right-color: var(--danger); }
+.toast.info { border-right-color: var(--accent); }
+
+.file-info { font-size: 0.85rem; color: #bdc3c7; line-height: 1.5; margin-bottom: 15px; text-align: right; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+
+/* סרגל גלילה אחיד */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #95a5a6; }
+.col-right::-webkit-scrollbar-track, .col-left::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+.col-right::-webkit-scrollbar-thumb, .col-left::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+.col-right::-webkit-scrollbar-thumb:hover, .col-left::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
