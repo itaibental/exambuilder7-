@@ -3,4 +3,4 @@
 // ה-anon key מיועד להיות חשוף בדפדפן; ההגנה על הנתונים נעשית ע"י Row Level Security (ראה supabase_schema.sql)
 
 export const SUPABASE_URL = "https://abcdxyz.supabase.co";
-export const SUPABASE_ANON_KEY = "sb_secret_28IWQBbtwJHvJdnJIRV1vg_vQ8tL7mv";
+export const SUPABASE_ANON_KEY = "YmVEsyEK3ckKbwgInq0mWQ_YvqEda9h";
